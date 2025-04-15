@@ -9,7 +9,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QFileDialog
 
 # Import the application to test
-from app import PDFConverterApp, ConversionWorker
+from file_convert.src.app import PDFConverterApp, ConversionWorker
 
 # Simple fixture for the app
 @pytest.fixture

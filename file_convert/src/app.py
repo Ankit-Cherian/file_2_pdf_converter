@@ -1,13 +1,45 @@
-# FileConvert - A simple file to PDF converter 
+#File2PDF - A simple file to PDF converter
 # Author: Ankit Cherian
-# Started: April 13, 2025
 
 import sys
 import os
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QLabel, 
                            QVBoxLayout, QHBoxLayout, QWidget, QFileDialog, 
                            QProgressBar, QMessageBox)
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
+import subprocess
+import platform
+import time  # Added for smoother progress updates
+
+class ConversionWorker(QThread):
+    """Worker thread to handle file conversion in the background"""
+    update_progress = pyqtSignal(int)
+    conversion_complete = pyqtSignal(bool, str)
+    
+    def __init__(self, file_path, output_path):
+        super().__init__()
+        self.file_path = file_path
+        self.output_path = output_path
+        
+    def run(self):
+        """Main method that runs when the thread starts"""
+        try:
+            file_extension = os.path.splitext(self.file_path)[1].lower()
+            
+            # Update progress
+            self.update_progress.emit(10)
+            time.sleep(0.5) # Delay for UI feedback
+            
+            # I'll add the actual conversion later 
+            # Simulate some work being done
+            for progress in range(20, 101, 20):
+                time.sleep(0.5)  # Simulate processing time
+                self.update_progress.emit(progress)
+            
+            # For now, just go without doing anything
+            self.conversion_complete.emit(True, "Conversion completed successfully (placeholder)")
+        except Exception as e:
+            self.conversion_complete.emit(False, str(e))
 
 class PDFConverterApp(QMainWindow):
     """Main application window for PDF conversion"""
@@ -128,10 +160,49 @@ class PDFConverterApp(QMainWindow):
     
     def convert_to_pdf(self):
         """Start the conversion process"""
-        # Just a placeholder for now
-        self.status_label.setText("Conversion functionality coming soon...")
+        if not self.selected_file:
+            QMessageBox.warning(self, "Error", "Please select a file to convert.")
+            return
+        
+        # Prepare output path if not already set
+        if not self.output_path:
+            file_dir = os.path.dirname(self.selected_file)
+            file_name = os.path.splitext(os.path.basename(self.selected_file))[0]
+            self.output_path = os.path.join(file_dir, f"{file_name}.pdf")
+        
+        # Create and start the worker thread
+        self.worker = ConversionWorker(self.selected_file, self.output_path)
+        self.worker.update_progress.connect(self.update_progress)
+        self.worker.conversion_complete.connect(self.conversion_finished)
+        
+        # Update UI
+        self.convert_button.setEnabled(False)
+        self.browse_button.setEnabled(False)
+        self.output_button.setEnabled(False)
+        self.status_label.setText("Converting...")
         self.status_label.setStyleSheet("color: blue;")
-        self.progress_bar.setValue(50)
+        
+        # Start conversion
+        self.worker.start()
+    
+    def update_progress(self, value):
+        """Update progress bar value"""
+        self.progress_bar.setValue(value)
+    
+    def conversion_finished(self, success, message):
+        """Handle conversion completion"""
+        # Re-enable UI
+        self.convert_button.setEnabled(True)
+        self.browse_button.setEnabled(True)
+        self.output_button.setEnabled(True)
+        
+        if success:
+            self.status_label.setText(f"Conversion successful! Saved to: {self.output_path}")
+            self.status_label.setStyleSheet("color: green;")
+            
+        else:
+            self.status_label.setText(f"Conversion failed: {message}")
+            self.status_label.setStyleSheet("color: red;")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
