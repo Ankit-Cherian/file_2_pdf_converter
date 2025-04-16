@@ -41,6 +41,8 @@ class ConversionWorker(QThread):
                 self.convert_image_to_pdf()
             elif file_extension in ['.txt', '.md', '.csv']:
                 self.convert_text_to_pdf()
+            elif file_extension == '.html':
+                self.convert_html_to_pdf()
             else:
                 # For now, other file types aren't supported
                 raise Exception(f"Unsupported file type: {file_extension}")
@@ -121,6 +123,30 @@ class ConversionWorker(QThread):
             self.update_progress.emit(100)
         except Exception as e:
             raise Exception(f"Text conversion failed: {str(e)}")
+            
+    def convert_html_to_pdf(self):
+        """Convert HTML to PDF using WeasyPrint or fallback to text conversion"""
+        try:
+            # First try to use WeasyPrint 
+            try:
+                import weasyprint
+                
+                self.update_progress.emit(30)
+                
+                # Read the HTML file
+                with open(self.file_path, 'r', encoding='utf-8', errors='replace') as file:
+                    html_content = file.read()
+                
+                self.update_progress.emit(60)
+                
+                # Convert HTML to PDF
+                weasyprint.HTML(string=html_content).write_pdf(self.output_path)
+                
+                self.update_progress.emit(100)
+            except (ImportError, OSError):
+                self.convert_text_to_pdf()
+        except Exception as e:
+            raise Exception(f"HTML conversion failed: {str(e)}")
 
 class PDFConverterApp(QMainWindow):
     """Main application window for PDF conversion"""
@@ -187,7 +213,7 @@ class PDFConverterApp(QMainWindow):
         
         # Supported file types info
         supported_label = QLabel("Supported file types:")
-        supported_types = QLabel("Images: .jpg, .jpeg, .png, .bmp, .gif\nText: .txt, .md, .csv\nOther formats coming soon.")
+        supported_types = QLabel("Images: .jpg, .jpeg, .png, .bmp, .gif\nText: .txt, .md, .csv\nWeb: .html\nOther formats coming soon!")
         supported_types.setStyleSheet("color: #666;")
         
         main_layout.addWidget(supported_label)
