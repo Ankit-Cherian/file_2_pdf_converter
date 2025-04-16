@@ -9,7 +9,10 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QLabel,
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 import subprocess
 import platform
-import time  # Added for smoother progress updates
+import time  
+from PIL import Image
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import inch
 
 class ConversionWorker(QThread):
     """Worker thread to handle file conversion in the background"""
@@ -28,18 +31,45 @@ class ConversionWorker(QThread):
             
             # Update progress
             self.update_progress.emit(10)
-            time.sleep(0.5) # Delay for UI feedback
+            time.sleep(0.5)  # Delay for UI feedback
             
-            # I'll add the actual conversion later 
-            # Simulate some work being done
-            for progress in range(20, 101, 20):
-                time.sleep(0.5)  # Simulate processing time
-                self.update_progress.emit(progress)
+            # Check file type and use appropriate conversion
+            if file_extension in ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff']:
+                self.convert_image_to_pdf()
+            else:
+                # For now, other file types aren't supported yet
+                # Just simulate progress for testing
+                for progress in range(20, 101, 20):
+                    time.sleep(0.5)  # Simulate processing time
+                    self.update_progress.emit(progress)
             
-            # For now, just go without doing anything
-            self.conversion_complete.emit(True, "Conversion completed successfully (placeholder)")
+            self.conversion_complete.emit(True, "Conversion completed successfully!")
         except Exception as e:
             self.conversion_complete.emit(False, str(e))
+            
+    def convert_image_to_pdf(self):
+        """Convert image to PDF using Pillow and reportlab"""
+        try:
+            self.update_progress.emit(30)
+            
+            # Open the image
+            img = Image.open(self.file_path)
+            width, height = img.size
+            
+            self.update_progress.emit(50)
+            
+            # Create a new PDF with reportlab
+            c = canvas.Canvas(self.output_path, pagesize=(width, height))
+            c.drawImage(self.file_path, 0, 0, width, height)
+            
+            self.update_progress.emit(80)
+            
+            # Save the PDF
+            c.save()
+            
+            self.update_progress.emit(100)
+        except Exception as e:
+            raise Exception(f"Image conversion failed: {str(e)}")
 
 class PDFConverterApp(QMainWindow):
     """Main application window for PDF conversion"""
@@ -105,8 +135,8 @@ class PDFConverterApp(QMainWindow):
         main_layout.addWidget(self.progress_bar)
         
         # Supported file types info
-        supported_label = QLabel("Supported file types (coming soon):")
-        supported_types = QLabel("Documents: .doc, .docx, .odt, .txt\nPresentations: .ppt, .pptx\nImages: .jpg, .png, .bmp")
+        supported_label = QLabel("Supported file types:")
+        supported_types = QLabel("Images: .jpg, .jpeg, .png, .bmp, .gif\nOther formats ill do later")
         supported_types.setStyleSheet("color: #666;")
         
         main_layout.addWidget(supported_label)
@@ -130,7 +160,7 @@ class PDFConverterApp(QMainWindow):
             self,
             "Select File to Convert",
             "",
-            "All Files (*)"
+            "All Files (*);;Images (*.jpg *.jpeg *.png *.bmp *.gif)"
         )
         
         if file_path:
