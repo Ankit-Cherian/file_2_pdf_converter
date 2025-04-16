@@ -13,6 +13,9 @@ import time
 from PIL import Image
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 class ConversionWorker(QThread):
     """Worker thread to handle file conversion in the background"""
@@ -36,12 +39,11 @@ class ConversionWorker(QThread):
             # Check file type and use appropriate conversion
             if file_extension in ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff']:
                 self.convert_image_to_pdf()
+            elif file_extension in ['.txt', '.md', '.csv']:
+                self.convert_text_to_pdf()
             else:
-                # For now, other file types aren't supported yet
-                # Just simulate progress for testing
-                for progress in range(20, 101, 20):
-                    time.sleep(0.5)  # Simulate processing time
-                    self.update_progress.emit(progress)
+                # For now, other file types aren't supported
+                raise Exception(f"Unsupported file type: {file_extension}")
             
             self.conversion_complete.emit(True, "Conversion completed successfully!")
         except Exception as e:
@@ -70,6 +72,55 @@ class ConversionWorker(QThread):
             self.update_progress.emit(100)
         except Exception as e:
             raise Exception(f"Image conversion failed: {str(e)}")
+
+    def convert_text_to_pdf(self):
+        """Convert text files to PDF using reportlab"""
+        try:
+            self.update_progress.emit(30)
+            
+            # Open and read the text file
+            with open(self.file_path, 'r', encoding='utf-8', errors='replace') as file:
+                text = file.readlines()
+            
+            self.update_progress.emit(50)
+            
+            # Create PDF
+            c = canvas.Canvas(self.output_path, pagesize=letter)
+            width, height = letter
+
+
+            try:
+                pdfmetrics.registerFont(TTFont('Courier', 'Courier'))
+                font_name = 'Courier'
+            except:
+                # Fallback to default font
+                font_name = 'Helvetica'
+            
+            c.setFont(font_name, 10)
+            
+            self.update_progress.emit(70)
+            
+            # Write text to PDF
+            y = height - inch  # Start position
+            line_height = 14    # Space between lines
+            margin = inch       # Page margin
+            
+            for line in text:
+                if y < margin:  # If we've reached the bottom margin
+                    c.showPage()
+                    c.setFont(font_name, 10)
+                    y = height - inch
+                
+                c.drawString(margin, y, line.rstrip('\n'))
+                y -= line_height
+            
+            self.update_progress.emit(90)
+            
+            c.save()
+            
+            self.update_progress.emit(100)
+        except Exception as e:
+            raise Exception(f"Text conversion failed: {str(e)}")
 
 class PDFConverterApp(QMainWindow):
     """Main application window for PDF conversion"""
@@ -136,7 +187,7 @@ class PDFConverterApp(QMainWindow):
         
         # Supported file types info
         supported_label = QLabel("Supported file types:")
-        supported_types = QLabel("Images: .jpg, .jpeg, .png, .bmp, .gif\nOther formats ill do later")
+        supported_types = QLabel("Images: .jpg, .jpeg, .png, .bmp, .gif\nText: .txt, .md, .csv\nOther formats coming soon.")
         supported_types.setStyleSheet("color: #666;")
         
         main_layout.addWidget(supported_label)
@@ -160,7 +211,7 @@ class PDFConverterApp(QMainWindow):
             self,
             "Select File to Convert",
             "",
-            "All Files (*);;Images (*.jpg *.jpeg *.png *.bmp *.gif)"
+            "All Files (*);;Images (*.jpg *.jpeg *.png *.bmp *.gif);;Text Files (*.txt *.md *.csv)"
         )
         
         if file_path:
