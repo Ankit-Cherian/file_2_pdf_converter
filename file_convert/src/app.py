@@ -16,6 +16,7 @@ from reportlab.lib.units import inch
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from pathlib import Path
 
 class ConversionWorker(QThread):
     """Worker thread to handle file conversion in the background"""
@@ -43,6 +44,8 @@ class ConversionWorker(QThread):
                 self.convert_text_to_pdf()
             elif file_extension == '.html':
                 self.convert_html_to_pdf()
+            elif file_extension in ['.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.odt', '.ods', '.odp']:
+                self.convert_using_libreoffice()
             else:
                 # For now, other file types aren't supported
                 raise Exception(f"Unsupported file type: {file_extension}")
@@ -148,6 +151,81 @@ class ConversionWorker(QThread):
         except Exception as e:
             raise Exception(f"HTML conversion failed: {str(e)}")
 
+    def convert_using_libreoffice(self):
+        """Convert Office documents using LibreOffice"""
+        self.update_progress.emit(20)
+        
+        # Get LibreOffice executable path based on OS
+        # Had to figure this out for each platform since it's in different locations
+        if platform.system() == "Darwin":  # macOS
+            soffice_path = "/Applications/LibreOffice.app/Contents/MacOS/soffice"
+            
+            # If not found at default location, try to find it elsewhere
+            if not os.path.exists(soffice_path):
+                # Check some other common locations
+                possible_paths = [
+                    "/Applications/LibreOffice.app/Contents/MacOS/soffice.bin",
+                    # Add more paths if needed
+                ]
+                
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        soffice_path = path
+                        break
+                        
+                # If still not found, try using 'which' command
+                if not os.path.exists(soffice_path):
+                    try:
+                        # Use subprocess to find the LibreOffice binary
+                        result = subprocess.run(['which', 'soffice'], 
+                                              capture_output=True, 
+                                              text=True)
+                        if result.returncode == 0 and result.stdout.strip():
+                            soffice_path = result.stdout.strip()
+                    except Exception:
+                        # If that fails too, we'll use the default path and let it fail with a meaningful error
+                        pass
+                        
+        elif platform.system() == "Windows":
+            # Windows typically has LibreOffice in Program Files
+            program_files = os.environ.get("PROGRAMFILES", "C:\\Program Files")
+            soffice_path = os.path.join(program_files, "LibreOffice", "program", "soffice.exe")
+        else:  # Linux
+            # Linux typically has it in the PATH
+            soffice_path = "libreoffice"
+        
+        # Make sure LibreOffice exists
+        if not os.path.exists(soffice_path) and platform.system() != "Linux":
+            raise Exception("LibreOffice not found. Please install LibreOffice to convert Office documents.")
+        
+        output_dir = os.path.dirname(self.output_path)
+        
+        self.update_progress.emit(40)
+        
+        # Run LibreOffice to convert the file
+        try:
+            subprocess.run([
+                soffice_path,
+                '--headless',
+                '--convert-to', 'pdf',
+                '--outdir', output_dir,
+                self.file_path
+            ], check=True)
+            
+            self.update_progress.emit(80)
+            
+            # Rename the output file if needed
+            base_name = os.path.basename(self.file_path)
+            file_name_without_ext = os.path.splitext(base_name)[0]
+            generated_pdf = os.path.join(output_dir, f"{file_name_without_ext}.pdf")
+            
+            if os.path.exists(generated_pdf) and generated_pdf != self.output_path:
+                os.rename(generated_pdf, self.output_path)
+                
+            self.update_progress.emit(100)
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"LibreOffice conversion failed: {str(e)}")
+
 class PDFConverterApp(QMainWindow):
     """Main application window for PDF conversion"""
     
@@ -213,7 +291,7 @@ class PDFConverterApp(QMainWindow):
         
         # Supported file types info
         supported_label = QLabel("Supported file types:")
-        supported_types = QLabel("Images: .jpg, .jpeg, .png, .bmp, .gif\nText: .txt, .md, .csv\nWeb: .html\nOther formats coming soon!")
+        supported_types = QLabel("Images: .jpg, .jpeg, .png, .bmp, .gif\nText: .txt, .md, .csv\nWeb: .html\nOffice: .doc, .docx, .ppt, .pptx, .xls, .xlsx, .odt, .ods, .odp\nOther formats coming soon!")
         supported_types.setStyleSheet("color: #666;")
         
         main_layout.addWidget(supported_label)
@@ -237,7 +315,7 @@ class PDFConverterApp(QMainWindow):
             self,
             "Select File to Convert",
             "",
-            "All Files (*);;Images (*.jpg *.jpeg *.png *.bmp *.gif);;Text Files (*.txt *.md *.csv)"
+            "All Files (*);;Images (*.jpg *.jpeg *.png *.bmp *.gif);;Text Files (*.txt *.md *.csv);;Office Documents (*.doc *.docx *.ppt *.pptx *.xls *.xlsx *.odt *.ods *.odp)"
         )
         
         if file_path:
