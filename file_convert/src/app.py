@@ -156,7 +156,6 @@ class ConversionWorker(QThread):
         self.update_progress.emit(20)
         
         # Get LibreOffice executable path based on OS
-        # Had to figure this out for each platform since it's in different locations
         if platform.system() == "Darwin":  # macOS
             soffice_path = "/Applications/LibreOffice.app/Contents/MacOS/soffice"
             
@@ -183,7 +182,6 @@ class ConversionWorker(QThread):
                         if result.returncode == 0 and result.stdout.strip():
                             soffice_path = result.stdout.strip()
                     except Exception:
-                        # If that fails too, we'll use the default path and let it fail with a meaningful error
                         pass
                         
         elif platform.system() == "Windows":
@@ -376,7 +374,6 @@ class PDFConverterApp(QMainWindow):
     
     def conversion_finished(self, success, message):
         """Handle conversion completion"""
-        # Re-enable UI
         self.convert_button.setEnabled(True)
         self.browse_button.setEnabled(True)
         self.output_button.setEnabled(True)
@@ -385,9 +382,42 @@ class PDFConverterApp(QMainWindow):
             self.status_label.setText(f"Conversion successful! Saved to: {self.output_path}")
             self.status_label.setStyleSheet("color: green;")
             
+            # Ask if the user wants to open the PDF
+            reply = QMessageBox.question(
+                self,
+                "Conversion Complete",
+                f"PDF created successfully at:\n{self.output_path}\n\nWould you like to open it?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.Yes
+            )
+            
+            if reply == QMessageBox.Yes:
+                self.open_file(self.output_path)
         else:
             self.status_label.setText(f"Conversion failed: {message}")
             self.status_label.setStyleSheet("color: red;")
+            
+            QMessageBox.critical(
+                self,
+                "Conversion Failed",
+                f"Error: {message}\n\nMake sure all required libraries are installed."
+            )
+
+    def open_file(self, file_path):
+        """Open the created PDF file"""
+        try:
+            if platform.system() == "Darwin":  # macOS
+                subprocess.call(["open", file_path])
+            elif platform.system() == "Windows":
+                os.startfile(file_path)
+            else:  # Linux
+                subprocess.call(["xdg-open", file_path])
+        except Exception as e:
+            QMessageBox.warning(
+                self,
+                "Error Opening File",
+                f"Could not open the PDF file: {str(e)}\n\nThe file was created successfully, but you'll need to open it manually."
+            )
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
