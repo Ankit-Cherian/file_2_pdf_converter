@@ -88,6 +88,12 @@ This app converts different types of files to PDF format without needing to use 
    ```
    cd path/to/extracted/folder/file_convert/src
    ```
+   Since your already in the folder in the terminal when you ran the requirements.txt command just enter this in your terminal:
+   ```
+   cd src
+   ```
+
+
 2. Run the app by typing:
    ```
    python app.py
