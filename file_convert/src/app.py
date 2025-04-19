@@ -237,45 +237,142 @@ class PDFConverterApp(QMainWindow):
         self.output_path = None
         
         self._init_ui()
-        self.setWindowTitle("FileConvert - PDF Creator")
-        self.setMinimumSize(600, 400)
+        self.setWindowTitle("FileConvert - Professional PDF Creator")
+        self.setGeometry(100, 100, 650, 500)
         
     def _init_ui(self):
+        # Basic Window Setup
+        self.setWindowTitle("FileConvert - Professional PDF Creator") # Slightly updated title
+        self.setGeometry(100, 100, 650, 500) 
+        
+        # Color Palette & Styles
+        COLOR_BACKGROUND = "#f8f9fa"  # Light gray background
+        COLOR_WIDGET_BG = "#e9ecef"   # Slightly darker for input areas
+        COLOR_BORDER = "#ced4da"      # Subtle border color
+        COLOR_PRIMARY = "#007bff"     # Blue for the main button
+        COLOR_PRIMARY_HOVER = "#0056b3" # Darker blue on hover
+        COLOR_TEXT = "#212529"        # Dark text color
+        COLOR_TEXT_SECONDARY = "#6c757d" # Lighter text for info
+        COLOR_SUCCESS = "#28a745"     # Green for success status
+        COLOR_ERROR = "#dc3545"       # Red for error status
+        COLOR_INFO = "#17a2b8"        # Blue for info/converting status
+
+        self.setStyleSheet(f"""
+            QMainWindow {{
+                background-color: {COLOR_BACKGROUND};
+            }}
+            QWidget {{
+                color: {COLOR_TEXT}; /* Default text color */
+            }}
+            QLabel {{
+                background-color: transparent; /* Ensure labels don't have unexpected backgrounds */
+            }}
+            QPushButton {{
+                background-color: {COLOR_WIDGET_BG};
+                color: {COLOR_TEXT};
+                border: 1px solid {COLOR_BORDER};
+                padding: 10px 15px; /* Increased padding */
+                border-radius: 4px; /* Rounded corners */
+                font-size: 14px; /* Consistent font size */
+            }}
+            QPushButton:hover {{
+                background-color: #dee2e6; /* Slightly darker on hover */
+                border-color: #adb5bd;
+            }}
+            QPushButton#ConvertButton {{ /* Specific style for the main button */
+                background-color: {COLOR_PRIMARY};
+                color: white;
+                font-size: 16px; /* Larger font */
+                font-weight: bold;
+                padding: 12px 20px;
+            }}
+            QPushButton#ConvertButton:hover {{
+                background-color: {COLOR_PRIMARY_HOVER};
+                border-color: {COLOR_PRIMARY_HOVER};
+            }}
+            QPushButton:disabled {{ /* Style for disabled buttons */
+                background-color: #e9ecef;
+                color: #adb5bd;
+            }}
+            QLabel#FileLabel, QLabel#OutputLabel {{ /* Style for the file/output display labels */
+                background-color: {COLOR_WIDGET_BG};
+                border: 1px solid {COLOR_BORDER};
+                padding: 10px;
+                border-radius: 4px;
+                font-size: 14px;
+            }}
+            QProgressBar {{
+                border: 1px solid {COLOR_BORDER};
+                border-radius: 4px;
+                text-align: center;
+                background-color: {COLOR_WIDGET_BG};
+                height: 25px; /* Slightly taller */
+            }}
+            QProgressBar::chunk {{
+                background-color: {COLOR_PRIMARY};
+                border-radius: 4px; /* Match outer radius */
+                margin: 1px; /* Small margin around the chunk */
+            }}
+            QLabel#StatusLabel {{ /* Prepare status label for colors */
+                font-size: 14px;
+                font-weight: bold;
+                padding-top: 10px;
+            }}
+            QLabel#TitleLabel {{ /* Style the main title */
+                font-size: 26px;
+                font-weight: bold;
+                color: {COLOR_TEXT};
+                padding-bottom: 10px; /* Add space below title */
+            }}
+             QLabel#SupportedLabel {{ /* Style for the 'Supported types' header */
+                font-size: 14px;
+                font-weight: bold;
+                margin-top: 10px;
+            }}
+            QLabel#SupportedTypes {{ /* Style for the list of types */
+                color: {COLOR_TEXT_SECONDARY};
+                font-size: 12px;
+                line-height: 1.5; /* Improve readability */
+            }}
+        """)
+
         # Create central widget and main layout
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         
         main_layout = QVBoxLayout(central_widget)
-        main_layout.setContentsMargins(20, 20, 20, 20)
-        main_layout.setSpacing(20)
+        main_layout.setContentsMargins(25, 25, 25, 25) # Slightly more margin
+        main_layout.setSpacing(15) # Consistent spacing between elements
+
+        # UI Elements
         
         # Create title
-        title_label = QLabel("FileConvert - PDF Creator")
-        title_label.setStyleSheet("font-size: 24px; font-weight: bold;")
+        title_label = QLabel("FileConvert PDF Creator")
+        title_label.setObjectName("TitleLabel") # Assign object name for specific styling
         title_label.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(title_label)
         
         # Create file selection area
         file_layout = QHBoxLayout()
+        file_layout.setSpacing(10) # Space between label and button
         self.file_label = QLabel("No file selected")
-        self.file_label.setStyleSheet("padding: 10px; background-color: #f0f0f0; border-radius: 5px;")
-        file_layout.addWidget(self.file_label, 7)
+        self.file_label.setObjectName("FileLabel") # Assign object name
+        file_layout.addWidget(self.file_label, 7) # Give label more horizontal space
         
-        self.browse_button = QPushButton("Browse")
-        self.browse_button.setStyleSheet("padding: 10px;")
+        self.browse_button = QPushButton("Browse...") # Added ellipsis
         self.browse_button.clicked.connect(self.browse_file)
-        file_layout.addWidget(self.browse_button, 3)
+        file_layout.addWidget(self.browse_button, 3) # Button takes less space
         
         main_layout.addLayout(file_layout)
         
         # Output directory selection
         output_layout = QHBoxLayout()
+        output_layout.setSpacing(10)
         self.output_label = QLabel("Output folder: Default (same as input)")
-        self.output_label.setStyleSheet("padding: 10px; background-color: #f0f0f0; border-radius: 5px;")
+        self.output_label.setObjectName("OutputLabel")
         output_layout.addWidget(self.output_label, 7)
         
-        self.output_button = QPushButton("Choose Folder")
-        self.output_button.setStyleSheet("padding: 10px;")
+        self.output_button = QPushButton("Choose Folder...")
         self.output_button.clicked.connect(self.choose_output_folder)
         output_layout.addWidget(self.output_button, 3)
         
@@ -286,26 +383,29 @@ class PDFConverterApp(QMainWindow):
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         self.progress_bar.setTextVisible(True)
-        self.progress_bar.setStyleSheet("margin-top: 20px;")
         main_layout.addWidget(self.progress_bar)
         
         # Supported file types info
         supported_label = QLabel("Supported file types:")
-        supported_types = QLabel("Images: .jpg, .jpeg, .png, .bmp, .gif\nText: .txt, .md, .csv\nWeb: .html\nOffice: .doc, .docx, .ppt, .pptx, .xls, .xlsx, .odt, .ods, .odp\nOther formats coming soon!")
-        supported_types.setStyleSheet("color: #666;")
+        supported_label.setObjectName("SupportedLabel")
+        supported_types = QLabel("Documents: .doc, .docx, .odt, .txt, .md\nPresentations: .ppt, .pptx, .odp\nSpreadsheets: .xls, .xlsx, .ods\nImages: .jpg, .png, .bmp, .gif\nOthers: .html, .csv")
+        supported_types.setObjectName("SupportedTypes")
         
         main_layout.addWidget(supported_label)
         main_layout.addWidget(supported_types)
+        # This will add a stretchable space before the convert button and status
+        main_layout.addStretch(1)
         
         # Convert button
         self.convert_button = QPushButton("Convert to PDF")
-        self.convert_button.setStyleSheet("font-size: 18px; padding: 15px; background-color: #4CAF50; color: white;")
+        self.convert_button.setObjectName("ConvertButton") # Assign object name
         self.convert_button.clicked.connect(self.convert_to_pdf)
         self.convert_button.setEnabled(False)
         main_layout.addWidget(self.convert_button)
         
         # Status label
         self.status_label = QLabel("")
+        self.status_label.setObjectName("StatusLabel") # Assign object name
         self.status_label.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(self.status_label)
     
@@ -360,12 +460,15 @@ class PDFConverterApp(QMainWindow):
         self.worker.update_progress.connect(self.update_progress)
         self.worker.conversion_complete.connect(self.conversion_finished)
         
+        # Define the color constant for consistent styling
+        COLOR_INFO = "#17a2b8"
+        
         # Update UI
         self.convert_button.setEnabled(False)
         self.browse_button.setEnabled(False)
         self.output_button.setEnabled(False)
         self.status_label.setText("Converting...")
-        self.status_label.setStyleSheet("color: blue;")
+        self.status_label.setStyleSheet(f"color: {COLOR_INFO};")
         
         # Start conversion
         self.worker.start()
@@ -381,13 +484,24 @@ class PDFConverterApp(QMainWindow):
         self.browse_button.setEnabled(True)
         self.output_button.setEnabled(True)
         
+        COLOR_SUCCESS = "#28a745" 
+        COLOR_ERROR = "#dc3545"  
+        COLOR_INFO = "#17a2b8"   
+
         if success:
             self.status_label.setText(f"Conversion successful! Saved to: {self.output_path}")
-            self.status_label.setStyleSheet("color: green;")
+            # Use the color constant
+            self.status_label.setStyleSheet(f"color: {COLOR_SUCCESS};") 
             
         else:
             self.status_label.setText(f"Conversion failed: {message}")
-            self.status_label.setStyleSheet("color: red;")
+             # Use the color constant
+            self.status_label.setStyleSheet(f"color: {COLOR_ERROR};")
+            QMessageBox.critical(
+                self,
+                "Conversion Failed",
+                f"Error: {message}\n\nPlease check the file type and ensure all necessary software (like LibreOffice) is installed correctly."
+             )
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
