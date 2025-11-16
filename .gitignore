@@ -23,5 +23,6 @@ build/
 # IDE files
 .idea/
 .vscode/
+.obsidian/
 *.swp
 *.swo
